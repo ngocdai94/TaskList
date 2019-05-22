@@ -8,10 +8,10 @@ public class Task {
     private String notes;
     private String completedDate;
     private String hidden;
-    
+
     public static final String TRUE = "1";
     public static final String FALSE = "0";
-    
+
     public Task() {
         name = "";
         notes = "";
@@ -20,7 +20,7 @@ public class Task {
     }
 
     public Task(int listId, String name, String notes,
-            String completed, String hidden) {
+                String completed, String hidden) {
         this.listId = listId;
         this.name = name;
         this.notes = notes;
@@ -29,7 +29,7 @@ public class Task {
     }
 
     public Task(int taskId, int listId, String name, String notes,
-            String completed, String hidden) {
+                String completed, String hidden) {
         this.taskId = taskId;
         this.listId = listId;
         this.name = name;
@@ -45,7 +45,7 @@ public class Task {
     public void setId(long taskId) {
         this.taskId = taskId;
     }
-    
+
     public long getListId() {
         return listId;
     }
@@ -53,7 +53,7 @@ public class Task {
     public void setListId(long listId) {
         this.listId = listId;
     }
-    
+
     public String getName() {
         return name;
     }
@@ -61,7 +61,7 @@ public class Task {
     public void setName(String name) {
         this.name = name;
     }
-    
+
     public String getNotes() {
         return notes;
     }
@@ -69,7 +69,7 @@ public class Task {
     public void setNotes(String notes) {
         this.notes = notes;
     }
-    
+
     public String getCompletedDate() {
         return completedDate;
     }
@@ -78,19 +78,19 @@ public class Task {
         return Long.parseLong(completedDate);
     }
 
-    public void setCompletedDate(String date_completed) {
-        this.completedDate = date_completed;    
+    public void setCompletedDate(String completedDate) {
+        this.completedDate = completedDate;
     }
-    
+
     public void setCompletedDate(long millis) {
-        this.completedDate = Long.toString(millis);    
+        this.completedDate = Long.toString(millis);
     }
-    
+
     public String getHidden(){
         return hidden;
     }
-    
+
     public void setHidden(String hidden) {
-        this.hidden = hidden;    
-    }    
+        this.hidden = hidden;
+    }
 }

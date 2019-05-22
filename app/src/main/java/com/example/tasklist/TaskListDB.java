@@ -18,7 +18,7 @@ public class TaskListDB {
 
     // list table constants
     public static final String LIST_TABLE = "list";
-    
+
     public static final String LIST_ID = "_id";
     public static final int    LIST_ID_COL = 0;
 
@@ -33,44 +33,44 @@ public class TaskListDB {
 
     public static final String TASK_LIST_ID = "list_id";
     public static final int    TASK_LIST_ID_COL = 1;
-    
+
     public static final String TASK_NAME = "task_name";
     public static final int    TASK_NAME_COL = 2;
-    
+
     public static final String TASK_NOTES = "notes";
     public static final int    TASK_NOTES_COL = 3;
-    
+
     public static final String TASK_COMPLETED = "date_completed";
     public static final int    TASK_COMPLETED_COL = 4;
 
     public static final String TASK_HIDDEN = "hidden";
     public static final int    TASK_HIDDEN_COL = 5;
-    
-    // CREATE and DROP TABLE statements
-    public static final String CREATE_LIST_TABLE = 
-            "CREATE TABLE " + LIST_TABLE + " (" + 
-            LIST_ID   + " INTEGER PRIMARY KEY AUTOINCREMENT, " + 
-            LIST_NAME + " TEXT    NOT NULL UNIQUE);";
-    
-    public static final String CREATE_TASK_TABLE = 
-            "CREATE TABLE " + TASK_TABLE + " (" + 
-            TASK_ID         + " INTEGER PRIMARY KEY AUTOINCREMENT, " + 
-            TASK_LIST_ID    + " INTEGER NOT NULL, " + 
-            TASK_NAME       + " TEXT    NOT NULL, " + 
-            TASK_NOTES      + " TEXT, " + 
-            TASK_COMPLETED  + " TEXT, " + 
-            TASK_HIDDEN     + " TEXT);";
 
-    public static final String DROP_LIST_TABLE = 
+    // CREATE and DROP TABLE statements
+    public static final String CREATE_LIST_TABLE =
+            "CREATE TABLE " + LIST_TABLE + " (" +
+                    LIST_ID   + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    LIST_NAME + " TEXT    UNIQUE)";
+
+    public static final String CREATE_TASK_TABLE =
+            "CREATE TABLE " + TASK_TABLE + " (" +
+                    TASK_ID         + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    TASK_LIST_ID    + " INTEGER, " +
+                    TASK_NAME       + " TEXT, " +
+                    TASK_NOTES      + " TEXT, " +
+                    TASK_COMPLETED  + " TEXT, " +
+                    TASK_HIDDEN     + " TEXT)";
+
+    public static final String DROP_LIST_TABLE =
             "DROP TABLE IF EXISTS " + LIST_TABLE;
 
-    public static final String DROP_TASK_TABLE = 
+    public static final String DROP_TASK_TABLE =
             "DROP TABLE IF EXISTS " + TASK_TABLE;
-    
+
     private static class DBHelper extends SQLiteOpenHelper {
 
-        public DBHelper(Context context, String name, 
-                CursorFactory factory, int version) {
+        public DBHelper(Context context, String name,
+                        CursorFactory factory, int version) {
             super(context, name, factory, version);
         }
 
@@ -79,11 +79,11 @@ public class TaskListDB {
             // create tables
             db.execSQL(CREATE_LIST_TABLE);
             db.execSQL(CREATE_TASK_TABLE);
-            
-            // insert default lists
+
+            // insert lists
             db.execSQL("INSERT INTO list VALUES (1, 'Personal')");
             db.execSQL("INSERT INTO list VALUES (2, 'Business')");
-            
+
             // insert sample tasks
             db.execSQL("INSERT INTO task VALUES (1, 1, 'Pay bills', " +
                     "'Rent\nPhone\nInternet', '0', '0')");
@@ -92,117 +92,115 @@ public class TaskListDB {
         }
 
         @Override
-        public void onUpgrade(SQLiteDatabase db, 
-                int oldVersion, int newVersion) {
+        public void onUpgrade(SQLiteDatabase db,
+                              int oldVersion, int newVersion) {
 
-            Log.d("Task list", "Upgrading db from version " 
+            Log.d("Task list", "Upgrading db from version "
                     + oldVersion + " to " + newVersion);
-            
+
+            Log.d("Task list", "Deleting all data!");
             db.execSQL(TaskListDB.DROP_LIST_TABLE);
             db.execSQL(TaskListDB.DROP_TASK_TABLE);
             onCreate(db);
         }
     }
-    
-    // database and database helper objects
+
+    // database object and database helper object
     private SQLiteDatabase db;
     private DBHelper dbHelper;
-    
+
     // constructor
     public TaskListDB(Context context) {
         dbHelper = new DBHelper(context, DB_NAME, null, DB_VERSION);
     }
-    
+
     // private methods
     private void openReadableDB() {
         db = dbHelper.getReadableDatabase();
     }
-    
+
     private void openWriteableDB() {
         db = dbHelper.getWritableDatabase();
     }
-    
+
     private void closeDB() {
         if (db != null)
             db.close();
     }
-    
+
     // public methods
     public ArrayList<List> getLists() {
         ArrayList<List> lists = new ArrayList<List>();
         openReadableDB();
-        Cursor cursor = db.query(LIST_TABLE, 
+        Cursor cursor = db.query(LIST_TABLE,
                 null, null, null, null, null, null);
         while (cursor.moveToNext()) {
-             List list = new List();
-             list.setId(cursor.getInt(LIST_ID_COL));
-             list.setName(cursor.getString(LIST_NAME_COL));
-             
-             lists.add(list);
+            List list = new List();
+            list.setId(cursor.getInt(LIST_ID_COL));
+            list.setName(cursor.getString(LIST_NAME_COL));
+
+            lists.add(list);
         }
-        if (cursor != null)
-            cursor.close();
+        cursor.close();
         closeDB();
-        
         return lists;
     }
-    
+
     public List getList(String name) {
         String where = LIST_NAME + "= ?";
         String[] whereArgs = { name };
 
         openReadableDB();
-        Cursor cursor = db.query(LIST_TABLE, null, 
+        Cursor cursor = db.query(LIST_TABLE, null,
                 where, whereArgs, null, null, null);
         List list = null;
         cursor.moveToFirst();
         list = new List(cursor.getInt(LIST_ID_COL),
-                        cursor.getString(LIST_NAME_COL));
+                cursor.getString(LIST_NAME_COL));
+        cursor.close();
+        this.closeDB();
+
+        return list;
+    }
+
+    public ArrayList<Task> getTasks(String listName) {
+        String where =
+                TASK_LIST_ID + "= ? AND " +
+                        TASK_HIDDEN + "!='1'";
+        long listID = getList(listName).getId();
+        String[] whereArgs = { Long.toString(listID) };
+
+        this.openReadableDB();
+        Cursor cursor = db.query(TASK_TABLE, null,
+                where, whereArgs,
+                null, null, null);
+        ArrayList<Task> tasks = new ArrayList<Task>();
+        while (cursor.moveToNext()) {
+            tasks.add(getTaskFromCursor(cursor));
+        }
         if (cursor != null)
             cursor.close();
         this.closeDB();
-        
-        return list;
-    }
-    
-    public ArrayList<Task> getTasks(String listName) {
-        String where = 
-                TASK_LIST_ID + "= ? AND " + 
-                TASK_HIDDEN + "!='1'";
-        int listID = getList(listName).getId();
-        String[] whereArgs = { Integer.toString(listID) };
-
-        this.openReadableDB();
-        Cursor cursor = db.query(TASK_TABLE, null, 
-                where, whereArgs, 
-                null, null, null);
-        ArrayList<Task> tasks = new ArrayList<Task>();        
-        while (cursor.moveToNext()) {
-             tasks.add(getTaskFromCursor(cursor));
-        }
-        if (cursor != null)
-            cursor.close();        
-        this.closeDB();
-
         return tasks;
     }
-    
-    public Task getTask(int id) {
-        String where = TASK_ID + "= ?";
-        String[] whereArgs = { Integer.toString(id) };
 
+    public Task getTask(long id) {
+        String where = TASK_ID + "= ?";
+        String[] whereArgs = { Long.toString(id) };
+
+        // handle exceptions?
         this.openReadableDB();
-        Cursor cursor = db.query(TASK_TABLE, 
+        Cursor cursor = db.query(TASK_TABLE,
                 null, where, whereArgs, null, null, null);
         cursor.moveToFirst();
         Task task = getTaskFromCursor(cursor);
         if (cursor != null)
             cursor.close();
         this.closeDB();
-        
+
         return task;
-    }    
-    
+    }
+
     private static Task getTaskFromCursor(Cursor cursor) {
         if (cursor == null || cursor.getCount() == 0){
             return null;
@@ -210,12 +208,12 @@ public class TaskListDB {
         else {
             try {
                 Task task = new Task(
-                    cursor.getInt(TASK_ID_COL), 
-                    cursor.getInt(TASK_LIST_ID_COL),
-                    cursor.getString(TASK_NAME_COL), 
-                    cursor.getString(TASK_NOTES_COL), 
-                    cursor.getString(TASK_COMPLETED_COL),
-                    cursor.getString(TASK_HIDDEN_COL));
+                        cursor.getInt(TASK_ID_COL),
+                        cursor.getInt(TASK_LIST_ID_COL),
+                        cursor.getString(TASK_NAME_COL),
+                        cursor.getString(TASK_NOTES_COL),
+                        cursor.getString(TASK_COMPLETED_COL),
+                        cursor.getString(TASK_HIDDEN_COL));
                 return task;
             }
             catch(Exception e) {
@@ -223,7 +221,7 @@ public class TaskListDB {
             }
         }
     }
-    
+
     public long insertTask(Task task) {
         ContentValues cv = new ContentValues();
         cv.put(TASK_LIST_ID, task.getListId());
@@ -231,14 +229,14 @@ public class TaskListDB {
         cv.put(TASK_NOTES, task.getNotes());
         cv.put(TASK_COMPLETED, task.getCompletedDate());
         cv.put(TASK_HIDDEN, task.getHidden());
-        
+
         this.openWriteableDB();
         long rowID = db.insert(TASK_TABLE, null, cv);
         this.closeDB();
-        
+
         return rowID;
-    }    
-    
+    }
+
     public int updateTask(Task task) {
         ContentValues cv = new ContentValues();
         cv.put(TASK_LIST_ID, task.getListId());
@@ -246,17 +244,17 @@ public class TaskListDB {
         cv.put(TASK_NOTES, task.getNotes());
         cv.put(TASK_COMPLETED, task.getCompletedDate());
         cv.put(TASK_HIDDEN, task.getHidden());
-        
+
         String where = TASK_ID + "= ?";
         String[] whereArgs = { String.valueOf(task.getId()) };
 
         this.openWriteableDB();
         int rowCount = db.update(TASK_TABLE, cv, where, whereArgs);
         this.closeDB();
-        
+
         return rowCount;
-    }    
-    
+    }
+
     public int deleteTask(long id) {
         String where = TASK_ID + "= ?";
         String[] whereArgs = { String.valueOf(id) };
@@ -264,7 +262,7 @@ public class TaskListDB {
         this.openWriteableDB();
         int rowCount = db.delete(TASK_TABLE, where, whereArgs);
         this.closeDB();
-        
+
         return rowCount;
     }
 }
